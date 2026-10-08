@@ -1,1 +1,34 @@
+name: ZorgSamen APK
 
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository ophalen
+        uses: actions/checkout@v4
+
+      - name: Java 17 instellen
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle instellen
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: APK bouwen
+        working-directory: ZorgSamen-build
+        run: gradle assembleDebug --no-daemon
+
+      - name: APK beschikbaar maken
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZorgSamen-APK
+          path: ZorgSamen-build/app/build/outputs/apk/debug/app-debug.apk

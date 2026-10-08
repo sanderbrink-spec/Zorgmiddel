@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Repository ophalen
         uses: actions/checkout@v4
 
       - name: Java 17
@@ -25,17 +25,40 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: ZIP uitpakken
+      - name: ZorgSamen ZIP zoeken
         run: |
-          mkdir build-source
-          unzip -q ZorgSamen-build-v2.zip -d build-source
+          ZIP=$(find . -maxdepth 2 -type f -iname 'ZorgSamen*.zip' | head -n 1)
+          if [ -z "$ZIP" ]; then
+            echo "Geen ZorgSamen ZIP gevonden."
+            exit 1
+          fi
+          echo "Gevonden: $ZIP"
+          mkdir -p build-source
+          unzip -q "$ZIP" -d build-source
+
+      - name: Android project vinden
+        run: |
+          echo "Projectstructuur:"
+          find build-source -maxdepth 4 -type f | head -100
 
       - name: APK bouwen
-        working-directory: build-source/ZorgSamen-build
-        run: gradle assembleDebug --no-daemon
+        run: |
+          PROJECT=$(find build-source -name settings.gradle -o -name settings.gradle.kts | head -n 1)
+          if [ -z "$PROJECT" ]; then
+            echo "Geen Android Gradle project gevonden."
+            exit 1
+          fi
+
+          DIR=$(dirname "$PROJECT")
+          echo "Android project: $DIR"
+
+          cd "$DIR"
+          gradle assembleDebug --no-daemon
 
       - name: APK uploaden
         uses: actions/upload-artifact@v4
         with:
           name: ZorgSamen-APK
-          path: build-source/ZorgSamen-build/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            build-source/**/app/build/outputs/apk/debug/*.apk
+            build-source/**/build/outputs/apk/debug/*.apk
